@@ -189,10 +189,10 @@ export default function Pedido() {
 
       toast({
         title: "Pedido enviado com sucesso!",
-        description: `O seu pedido ${orderData.order_number} foi registado. Entraremos em contacto em breve.`,
+        description: `O seu pedido foi registado. Siga as instruções de pagamento.`,
       });
 
-      navigate("/cliente");
+      navigate(`/pedido-confirmado?pedido=${orderData.id}`);
     } catch (error: any) {
       console.error("Order error:", error);
       toast({
