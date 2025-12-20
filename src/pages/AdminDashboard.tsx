@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Users,
   Package,
@@ -16,6 +20,9 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  LogOut,
+  Loader2,
+  Shield,
 } from "lucide-react";
 import {
   Select,
@@ -24,42 +31,209 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
-// Demo data
-const stats = {
-  totalUsers: 156,
-  totalOrders: 89,
-  pendingOrders: 12,
-  completedOrders: 77,
-  revenue: "2.450.000",
-};
+interface UserWithRole {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  business_name: string | null;
+  created_at: string;
+  role: string;
+  is_supreme_admin: boolean;
+}
 
-const users = [
-  { id: 1, name: "João Silva", email: "joao@email.com", type: "cliente", orders: 3, joined: "2024-01-15" },
-  { id: 2, name: "Maria Santos", email: "maria@email.com", type: "cliente", orders: 1, joined: "2024-02-20" },
-  { id: 3, name: "Pedro Costa", email: "pedro@email.com", type: "admin", orders: 0, joined: "2024-01-01", isSupreme: true },
-  { id: 4, name: "Ana Moreira", email: "ana@email.com", type: "cliente", orders: 5, joined: "2023-11-10" },
-];
+interface Order {
+  id: string;
+  order_number: string;
+  status: string;
+  business_name: string;
+  created_at: string;
+  profiles: { full_name: string } | null;
+  packages: { name: string } | null;
+}
 
-const recentOrders = [
-  { id: "PED-089", client: "João Silva", package: "Premium", status: "completed", date: "2024-03-10" },
-  { id: "PED-088", client: "Maria Santos", package: "Básico", status: "in_progress", date: "2024-03-09" },
-  { id: "PED-087", client: "Ana Moreira", package: "Padrão", status: "pending", date: "2024-03-08" },
-];
+interface NavigationStat {
+  page_path: string;
+  count: number;
+}
 
-const statusConfig = {
-  pending: { label: "Pendente", color: "warning", icon: AlertCircle },
-  in_progress: { label: "Em Progresso", color: "info", icon: Clock },
-  completed: { label: "Concluído", color: "success", icon: CheckCircle2 },
+const statusConfig: Record<string, { label: string; color: "warning" | "info" | "success" | "secondary"; icon: any }> = {
+  pendente: { label: "Pendente", color: "warning", icon: AlertCircle },
+  em_andamento: { label: "Em Andamento", color: "info", icon: Clock },
+  demo: { label: "Demo", color: "info", icon: Eye },
+  avaliacao: { label: "Avaliação", color: "warning", icon: Clock },
+  concluido: { label: "Concluído", color: "success", icon: CheckCircle2 },
+  cancelado: { label: "Cancelado", color: "secondary", icon: AlertCircle },
 };
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { user, role, isSupremeAdmin, loading, signOut } = useAuth();
+  const { toast } = useToast();
+  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [navStats, setNavStats] = useState<NavigationStat[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (!loading && (!user || role !== "admin")) {
+      navigate("/login");
+    }
+  }, [user, role, loading, navigate]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user || role !== "admin") return;
+
+      // Fetch users with roles
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (profilesData) {
+        const usersWithRoles: UserWithRole[] = [];
+        for (const profile of profilesData) {
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role, is_supreme_admin")
+            .eq("user_id", profile.user_id)
+            .maybeSingle();
+
+          usersWithRoles.push({
+            id: profile.id,
+            user_id: profile.user_id,
+            full_name: profile.full_name,
+            email: profile.email,
+            business_name: profile.business_name,
+            created_at: profile.created_at,
+            role: roleData?.role || "cliente",
+            is_supreme_admin: roleData?.is_supreme_admin || false,
+          });
+        }
+        setUsers(usersWithRoles);
+      }
+
+      // Fetch orders
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select(`
+          id,
+          order_number,
+          status,
+          business_name,
+          created_at,
+          packages:package_id (name)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (ordersData) {
+        setOrders(ordersData as Order[]);
+      }
+
+      // Fetch navigation stats
+      const { data: navData } = await supabase
+        .from("navigation_logs")
+        .select("page_path");
+
+      if (navData) {
+        const stats: Record<string, number> = {};
+        navData.forEach((log) => {
+          stats[log.page_path] = (stats[log.page_path] || 0) + 1;
+        });
+        const sortedStats = Object.entries(stats)
+          .map(([page_path, count]) => ({ page_path, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 4);
+        setNavStats(sortedStats);
+      }
+
+      setLoadingData(false);
+    };
+
+    fetchData();
+  }, [user, role]);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const handleDeleteUser = async (userId: string, userIsSupreme: boolean) => {
+    if (userIsSupreme) {
+      toast({
+        title: "Não permitido",
+        description: "O administrador supremo não pode ser removido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Here you would implement user deletion
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A remoção de utilizadores será implementada em breve.",
+    });
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Nome", "Email", "Negócio", "Tipo", "Data de Registo"];
+    const rows = users.map((u) => [
+      u.full_name,
+      u.email,
+      u.business_name || "",
+      u.role,
+      new Date(u.created_at).toLocaleDateString("pt-MZ"),
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `utilizadores_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+
+    toast({
+      title: "Exportação concluída",
+      description: "O ficheiro CSV foi descarregado.",
+    });
+  };
+
+  if (loading || loadingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const stats = {
+    totalUsers: users.length,
+    totalOrders: orders.length,
+    pendingOrders: orders.filter((o) => o.status === "pendente" || o.status === "em_andamento").length,
+    completedOrders: orders.filter((o) => o.status === "concluido").length,
+  };
+
+  const pageLabels: Record<string, string> = {
+    "/": "Página Inicial",
+    "/servicos": "Serviços",
+    "/planos": "Planos",
+    "/pedido": "Formulário de Pedido",
+    "/sobre": "Sobre Nós",
+    "/login": "Login",
+    "/registro": "Registro",
+  };
 
   return (
-    <div className="min-h-screen py-24 bg-muted/30">
+    <div className="min-h-screen py-8 bg-muted/30">
       <div className="container mx-auto px-4">
+        <Breadcrumbs />
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -68,19 +242,33 @@ export default function AdminDashboard() {
           className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
         >
           <div>
-            <h1 className="text-3xl font-bold mb-2">Painel Administrativo</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">Painel Administrativo</h1>
+              {isSupremeAdmin && (
+                <Badge className="gradient-primary text-primary-foreground">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Supremo
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground">
               Gerencie utilizadores, pedidos e acompanhe o desempenho.
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={exportToCSV}>
               <Download className="w-4 h-4 mr-2" />
-              Exportar Dados
+              Exportar
             </Button>
-            <Button variant="hero">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Adicionar Admin
+            {isSupremeAdmin && (
+              <Button variant="hero">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Adicionar Admin
+              </Button>
+            )}
+            <Button variant="ghost" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
             </Button>
           </div>
         </motion.div>
@@ -90,7 +278,7 @@ export default function AdminDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           <div className="p-6 rounded-2xl bg-card border border-border shadow-soft">
             <div className="flex items-center gap-3 mb-2">
@@ -123,14 +311,6 @@ export default function AdminDashboard() {
             </div>
             <p className="text-2xl font-bold">{stats.completedOrders}</p>
           </div>
-
-          <div className="p-6 rounded-2xl gradient-primary text-primary-foreground shadow-soft col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm text-primary-foreground/80">Receita Total</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.revenue} MZN</p>
-          </div>
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -158,37 +338,42 @@ export default function AdminDashboard() {
               {users
                 .filter(
                   (user) =>
-                    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     user.email.toLowerCase().includes(searchTerm.toLowerCase())
                 )
-                .map((user) => (
+                .map((u) => (
                   <div
-                    key={user.id}
+                    key={u.id}
                     className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-muted-foreground">
-                        {user.name.charAt(0)}
+                        {u.full_name.charAt(0)}
                       </div>
                       <div>
                         <p className="font-medium flex items-center gap-2">
-                          {user.name}
-                          {user.isSupreme && (
+                          {u.full_name}
+                          {u.is_supreme_admin && (
                             <Badge variant="default" className="text-xs">
                               Supremo
                             </Badge>
                           )}
                         </p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="text-sm text-muted-foreground">{u.email}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Badge variant={user.type === "admin" ? "default" : "outline"}>
-                        {user.type === "admin" ? "Admin" : "Cliente"}
+                      <Badge variant={u.role === "admin" ? "default" : "outline"}>
+                        {u.role === "admin" ? "Admin" : "Cliente"}
                       </Badge>
-                      {!user.isSupreme && (
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                      {isSupremeAdmin && !u.is_supreme_admin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteUser(u.user_id, u.is_supreme_admin)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
@@ -214,18 +399,18 @@ export default function AdminDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="completed">Concluídos</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="concluido">Concluídos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="divide-y divide-border">
-              {recentOrders
+            <div className="divide-y divide-border max-h-96 overflow-auto">
+              {orders
                 .filter((order) => filterStatus === "all" || order.status === filterStatus)
                 .map((order) => {
-                  const status = statusConfig[order.status as keyof typeof statusConfig];
+                  const status = statusConfig[order.status] || statusConfig.pendente;
                   const StatusIcon = status.icon;
 
                   return (
@@ -234,14 +419,14 @@ export default function AdminDashboard() {
                       className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
                     >
                       <div>
-                        <p className="font-medium">{order.id}</p>
+                        <p className="font-medium">{order.order_number}</p>
                         <p className="text-sm text-muted-foreground">
-                          {order.client} • {order.package}
+                          {order.business_name} • {order.packages?.name || "Pacote"}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <Badge variant={status.color as "warning" | "info" | "success"}>
+                        <Badge variant={status.color}>
                           <StatusIcon className="w-3 h-3 mr-1" />
                           {status.label}
                         </Badge>
@@ -256,7 +441,7 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
 
-        {/* Navigation Tracking (Preview) */}
+        {/* Navigation Tracking */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -265,18 +450,22 @@ export default function AdminDashboard() {
         >
           <h2 className="text-xl font-semibold mb-6">Rastreamento de Navegação</h2>
           <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { page: "Página Inicial", views: 1234 },
-              { page: "Serviços", views: 856 },
-              { page: "Planos", views: 623 },
-              { page: "Formulário de Pedido", views: 412 },
-            ].map((item) => (
-              <div key={item.page} className="p-4 rounded-xl bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-1">{item.page}</p>
-                <p className="text-2xl font-bold">{item.views.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">visualizações</p>
+            {navStats.length > 0 ? (
+              navStats.map((item) => (
+                <div key={item.page_path} className="p-4 rounded-xl bg-muted/50">
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {pageLabels[item.page_path] || item.page_path}
+                  </p>
+                  <p className="text-2xl font-bold">{item.count.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">visualizações</p>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-4 text-center py-8 text-muted-foreground">
+                <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum dado de navegação ainda.</p>
               </div>
-            ))}
+            )}
           </div>
         </motion.div>
       </div>
