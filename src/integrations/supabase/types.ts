@@ -19,7 +19,7 @@ export type Database = {
           client_email: string
           client_name: string
           client_phone: string | null
-          contract_number: string
+          contract_number: string | null
           created_at: string
           digital_signature: string | null
           id: string
@@ -34,7 +34,7 @@ export type Database = {
           client_email: string
           client_name: string
           client_phone?: string | null
-          contract_number: string
+          contract_number?: string | null
           created_at?: string
           digital_signature?: string | null
           id?: string
@@ -49,7 +49,7 @@ export type Database = {
           client_email?: string
           client_name?: string
           client_phone?: string | null
-          contract_number?: string
+          contract_number?: string | null
           created_at?: string
           digital_signature?: string | null
           id?: string
@@ -146,7 +146,7 @@ export type Database = {
           final_url: string | null
           id: string
           notes: string | null
-          order_number: string
+          order_number: string | null
           package_id: string | null
           plan_id: string | null
           preferences: string | null
@@ -163,7 +163,7 @@ export type Database = {
           final_url?: string | null
           id?: string
           notes?: string | null
-          order_number: string
+          order_number?: string | null
           package_id?: string | null
           plan_id?: string | null
           preferences?: string | null
@@ -180,7 +180,7 @@ export type Database = {
           final_url?: string | null
           id?: string
           notes?: string | null
-          order_number?: string
+          order_number?: string | null
           package_id?: string | null
           plan_id?: string | null
           preferences?: string | null
