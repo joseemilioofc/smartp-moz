@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Building2, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Registro() {
   const navigate = useNavigate();
@@ -15,8 +16,10 @@ export default function Registro() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
+    phone: "",
+    businessName: "",
     password: "",
     confirmPassword: "",
     userType: "cliente",
@@ -45,15 +48,52 @@ export default function Registro() {
 
     setIsLoading(true);
 
-    // Simulated registration - will be replaced with Supabase
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Conta criada!",
-        description: "Redirecionando para o login...",
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: formData.fullName,
+            phone: formData.phone,
+            business_name: formData.businessName,
+            role: formData.userType,
+          },
+        },
       });
-      navigate("/login");
-    }, 1500);
+
+      if (error) throw error;
+
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Você foi conectado automaticamente.",
+      });
+
+      // Redirect based on role
+      if (formData.userType === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/cliente");
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      
+      let message = error.message;
+      if (error.message.includes("already registered")) {
+        message = "Este email já está registado. Tente fazer login.";
+      }
+      
+      toast({
+        title: "Erro no registo",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,12 +117,12 @@ export default function Registro() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md py-8"
         >
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 mb-8">
@@ -101,23 +141,23 @@ export default function Registro() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome Completo</Label>
+              <Label htmlFor="fullName">Nome Completo *</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="fullName"
                   type="text"
                   placeholder="João Silva"
                   className="pl-10 h-12"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -132,8 +172,40 @@ export default function Registro() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+258 84..."
+                    className="pl-10 h-12"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessName">Nome do Negócio</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="businessName"
+                    type="text"
+                    placeholder="Sua empresa"
+                    className="pl-10 h-12"
+                    value={formData.businessName}
+                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">Senha *</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -156,7 +228,7 @@ export default function Registro() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -198,6 +270,9 @@ export default function Registro() {
                   </Label>
                 </div>
               </RadioGroup>
+              <p className="text-xs text-muted-foreground">
+                O primeiro administrador será o administrador supremo com controle total.
+              </p>
             </div>
 
             <Button

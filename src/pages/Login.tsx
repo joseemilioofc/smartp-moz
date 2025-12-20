@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,16 +22,44 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulated login - will be replaced with Supabase
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "O login será implementado com o backend.",
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
-      // For demo, redirect to client dashboard
-      navigate("/cliente");
-    }, 1500);
+
+      if (error) throw error;
+
+      // Check user role to redirect appropriately
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      toast({
+        title: "Login bem-sucedido!",
+        description: "Bem-vindo de volta.",
+      });
+
+      // Redirect based on role
+      if (roleData?.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/cliente");
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        title: "Erro no login",
+        description: error.message === "Invalid login credentials" 
+          ? "Email ou senha incorrectos." 
+          : error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

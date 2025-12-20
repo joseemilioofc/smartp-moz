@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -24,28 +25,30 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Auth routes without layout */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+        <AuthProvider>
+          <Routes>
+            {/* Auth routes without layout */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
 
-          {/* Dashboard routes without public layout */}
-          <Route path="/cliente" element={<ClienteDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+            {/* Dashboard routes without public layout */}
+            <Route path="/cliente" element={<ClienteDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
 
-          {/* Public routes with layout */}
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/servicos" element={<Servicos />} />
-            <Route path="/planos" element={<Planos />} />
-            <Route path="/sobre" element={<Sobre />} />
-            <Route path="/pedido" element={<Pedido />} />
-            <Route path="/politicas/:tipo" element={<Politicas />} />
-          </Route>
+            {/* Public routes with layout */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/servicos" element={<Servicos />} />
+              <Route path="/planos" element={<Planos />} />
+              <Route path="/sobre" element={<Sobre />} />
+              <Route path="/pedido" element={<Pedido />} />
+              <Route path="/politicas/:tipo" element={<Politicas />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
