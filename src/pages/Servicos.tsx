@@ -43,20 +43,19 @@ export default function Servicos() {
     {
       id: "1",
       name: "Básico",
-      price: 3500,
+      price: 3499,
       description: "Ideal para quem está a começar",
       features: [
         "1 página com logotipo e foto de capa",
         "Texto introdutório sobre o negócio",
         "Botão flutuante de WhatsApp",
         "Layout responsivo",
-        "Domínio .co.mz por 1 ano",
       ],
     },
     {
       id: "2",
       name: "Padrão",
-      price: 6000,
+      price: 5999,
       description: "Para negócios em crescimento",
       features: [
         "Até 3 páginas (início, serviços, contactos)",
@@ -65,13 +64,12 @@ export default function Servicos() {
         "Integração WhatsApp",
         "Localização no Google Maps",
         "Design responsivo",
-        "Certificado SSL",
       ],
     },
     {
       id: "3",
       name: "Premium",
-      price: 10000,
+      price: 9999,
       description: "Solução completa para empresas",
       features: [
         "Até 5 páginas personalizadas",
@@ -79,8 +77,6 @@ export default function Servicos() {
         "Página de agendamento (opcional)",
         "Integração Google Analytics",
         "Design personalizado exclusivo",
-        "Domínio .co.mz por 2 anos",
-        "Certificado SSL",
         "Suporte prioritário",
       ],
     },
