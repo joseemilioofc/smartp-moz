@@ -43,7 +43,7 @@ export default function Planos() {
     {
       id: "1",
       name: "Essencial",
-      price_monthly: 800,
+      price_monthly: 799,
       description: "Manutenção básica para sites simples",
       features: [
         "Actualizações técnicas básicas",
@@ -56,7 +56,7 @@ export default function Planos() {
     {
       id: "2",
       name: "Profissional",
-      price_monthly: 1500,
+      price_monthly: 1499,
       description: "Gestão completa para negócios activos",
       features: [
         "Tudo do plano Essencial",
@@ -70,7 +70,7 @@ export default function Planos() {
     {
       id: "3",
       name: "Total",
-      price_monthly: 2500,
+      price_monthly: 2499,
       description: "Solução completa com suporte ilimitado",
       features: [
         "Tudo do plano Profissional",
@@ -78,7 +78,6 @@ export default function Planos() {
         "Backup em tempo real",
         "Suporte WhatsApp 24/7",
         "Tempo de resposta: 4h",
-        "Gestão de redes sociais",
         "Consultor dedicado",
       ],
     },
