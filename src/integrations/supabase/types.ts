@@ -14,16 +14,313 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contracts: {
+        Row: {
+          client_email: string
+          client_name: string
+          client_phone: string | null
+          contract_number: string
+          created_at: string
+          digital_signature: string | null
+          id: string
+          order_id: string
+          service_description: string
+          signed_at: string | null
+          terms_accepted: boolean
+          total_value: number
+          user_id: string
+        }
+        Insert: {
+          client_email: string
+          client_name: string
+          client_phone?: string | null
+          contract_number: string
+          created_at?: string
+          digital_signature?: string | null
+          id?: string
+          order_id: string
+          service_description: string
+          signed_at?: string | null
+          terms_accepted?: boolean
+          total_value: number
+          user_id: string
+        }
+        Update: {
+          client_email?: string
+          client_name?: string
+          client_phone?: string | null
+          contract_number?: string
+          created_at?: string
+          digital_signature?: string | null
+          id?: string
+          order_id?: string
+          service_description?: string
+          signed_at?: string | null
+          terms_accepted?: boolean
+          total_value?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      management_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          is_active: boolean
+          name: string
+          price_monthly: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          price_monthly: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_monthly?: number
+        }
+        Relationships: []
+      }
+      navigation_logs: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          page_path: string
+          page_title: string | null
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          page_path: string
+          page_title?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          page_path?: string
+          page_title?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          business_name: string
+          business_type: string | null
+          created_at: string
+          demo_url: string | null
+          description: string | null
+          final_url: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          package_id: string | null
+          plan_id: string | null
+          preferences: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_name: string
+          business_type?: string | null
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          final_url?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          package_id?: string | null
+          plan_id?: string | null
+          preferences?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_name?: string
+          business_type?: string | null
+          created_at?: string
+          demo_url?: string | null
+          description?: string | null
+          final_url?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          package_id?: string | null
+          plan_id?: string | null
+          preferences?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "management_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          business_name: string | null
+          business_type: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          is_supreme_admin: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_supreme_admin?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_supreme_admin?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_supreme_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "cliente" | "admin"
+      order_status:
+        | "pendente"
+        | "em_andamento"
+        | "demo"
+        | "avaliacao"
+        | "concluido"
+        | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +447,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["cliente", "admin"],
+      order_status: [
+        "pendente",
+        "em_andamento",
+        "demo",
+        "avaliacao",
+        "concluido",
+        "cancelado",
+      ],
+    },
   },
 } as const
