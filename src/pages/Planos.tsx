@@ -159,7 +159,7 @@ export default function Planos() {
                     className="w-full"
                     asChild
                   >
-                    <Link to={`/pedido?plano=${plan.name.toLowerCase()}`}>
+                    <Link to={`/pedido-gestao?plano=${plan.name.toLowerCase()}`}>
                       Subscrever {plan.name}
                       <ArrowRight className="ml-2" />
                     </Link>
