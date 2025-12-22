@@ -12,6 +12,8 @@ import Servicos from "./pages/Servicos";
 import Planos from "./pages/Planos";
 import Sobre from "./pages/Sobre";
 import Pedido from "./pages/Pedido";
+import PedidoCriacao from "./pages/PedidoCriacao";
+import PedidoGestao from "./pages/PedidoGestao";
 import PedidoConfirmado from "./pages/PedidoConfirmado";
 import Politicas from "./pages/Politicas";
 import ClienteDashboard from "./pages/ClienteDashboard";
@@ -44,6 +46,8 @@ const App = () => (
               <Route path="/planos" element={<Planos />} />
               <Route path="/sobre" element={<Sobre />} />
               <Route path="/pedido" element={<Pedido />} />
+              <Route path="/pedido-criacao" element={<PedidoCriacao />} />
+              <Route path="/pedido-gestao" element={<PedidoGestao />} />
               <Route path="/pedido-confirmado" element={<PedidoConfirmado />} />
               <Route path="/politicas/:tipo" element={<Politicas />} />
               <Route path="/instalar" element={<Instalar />} />

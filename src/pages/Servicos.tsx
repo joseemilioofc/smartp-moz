@@ -184,7 +184,7 @@ export default function Servicos() {
                     }`}
                     asChild
                   >
-                    <Link to={`/pedido?pacote=${pkg.name.toLowerCase()}`}>
+                    <Link to={`/pedido-criacao?pacote=${pkg.name.toLowerCase()}`}>
                       Escolher {pkg.name}
                       <ArrowRight className="ml-2" />
                     </Link>
@@ -251,7 +251,7 @@ export default function Servicos() {
               className="bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90 border-0"
               asChild
             >
-              <Link to="/pedido">
+              <Link to="/pedido-criacao">
                 Pedir Consultoria Grátis
                 <ArrowRight className="ml-2" />
               </Link>
