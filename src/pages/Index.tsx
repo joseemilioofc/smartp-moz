@@ -84,7 +84,7 @@ const Index = () => {
               className="flex flex-col sm:flex-row gap-4"
             >
               <Button variant="hero" size="xl" asChild>
-                <Link to="/pedido">
+                <Link to="/pedido-criacao">
                   Peça Seu Site Agora
                   <ArrowRight className="ml-2" />
                 </Link>
@@ -254,7 +254,7 @@ const Index = () => {
                 className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 border-0"
                 asChild
               >
-                <Link to="/pedido">
+                <Link to="/pedido-criacao">
                   Começar Agora – É Grátis Consultar
                   <ArrowRight className="ml-2" />
                 </Link>

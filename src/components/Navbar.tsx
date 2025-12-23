@@ -51,7 +51,7 @@ export function Navbar() {
             <Link to="/login">Entrar</Link>
           </Button>
           <Button variant="hero" asChild>
-            <Link to="/pedido">Começar Agora</Link>
+            <Link to="/pedido-criacao">Começar Agora</Link>
           </Button>
         </div>
 
@@ -95,7 +95,7 @@ export function Navbar() {
                   </Link>
                 </Button>
                 <Button variant="hero" asChild>
-                  <Link to="/pedido" onClick={() => setMobileMenuOpen(false)}>
+                  <Link to="/pedido-criacao" onClick={() => setMobileMenuOpen(false)}>
                     Começar Agora
                   </Link>
                 </Button>
