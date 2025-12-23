@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { FormNavigation } from "@/components/FormNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -325,6 +326,9 @@ Observações: ${formData.observations || "Nenhuma"}
         <Breadcrumbs />
 
         <div className="max-w-4xl mx-auto">
+          {/* Form Navigation */}
+          <FormNavigation />
+
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
