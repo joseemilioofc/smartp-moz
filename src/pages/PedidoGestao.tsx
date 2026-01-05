@@ -9,9 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FormNavigation } from "@/components/FormNavigation";
+import { FormError } from "@/components/ui/form-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useFormValidation, pedidoGestaoSchema } from "@/hooks/useFormValidation";
 import {
   ArrowRight,
   Mail,
@@ -45,9 +47,9 @@ export default function PedidoGestao() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [digitalSignature, setDigitalSignature] = useState("");
+  const { validate, getError, clearError } = useFormValidation(pedidoGestaoSchema);
 
   const [formData, setFormData] = useState({
-    // 1. Dados do Cliente
     fullName: "",
     siteName: "",
     siteLink: "",
@@ -55,82 +57,41 @@ export default function PedidoGestao() {
     phone: "",
     whatsapp: "",
     businessType: "",
-
-    // 2. Tipo de Gestão
     managementTypes: [] as string[],
     managementOther: "",
-
-    // 3. Frequência
     frequency: "",
-
-    // 4. Plano
     planId: "",
-
-    // 5. Observações
     observations: "",
   });
 
   const defaultPlans = [
-    {
-      id: "1",
-      name: "Essencial",
-      price_monthly: 799,
-      description: "Manutenção básica mensal",
-      features: [],
-    },
-    {
-      id: "2",
-      name: "Profissional",
-      price_monthly: 1499,
-      description: "Gestão completa quinzenal",
-      features: [],
-    },
-    {
-      id: "3",
-      name: "Total",
-      price_monthly: 2499,
-      description: "Suporte ilimitado semanal",
-      features: [],
-    },
+    { id: "1", name: "Essencial", price_monthly: 799, description: "Manutenção básica mensal", features: [] },
+    { id: "2", name: "Profissional", price_monthly: 1499, description: "Gestão completa quinzenal", features: [] },
+    { id: "3", name: "Total", price_monthly: 2499, description: "Suporte ilimitado semanal", features: [] },
   ];
 
   useEffect(() => {
     const fetchPlans = async () => {
-      const { data } = await supabase
-        .from("management_plans")
-        .select("*")
-        .eq("is_active", true)
-        .order("price_monthly", { ascending: true });
+      const { data } = await supabase.from("management_plans").select("*").eq("is_active", true).order("price_monthly", { ascending: true });
 
       if (data && data.length > 0) {
-        setPlans(
-          data.map((plan) => ({
-            ...plan,
-            features: typeof plan.features === "string" ? JSON.parse(plan.features) : plan.features || [],
-          }))
-        );
+        setPlans(data.map((plan) => ({
+          ...plan,
+          features: typeof plan.features === "string" ? JSON.parse(plan.features) : plan.features || [],
+        })));
 
         if (preselectedPlan) {
-          const plan = data.find(
-            (p) => p.name.toLowerCase() === preselectedPlan.toLowerCase()
-          );
-          if (plan) {
-            setFormData((prev) => ({ ...prev, planId: plan.id }));
-          }
+          const plan = data.find((p) => p.name.toLowerCase() === preselectedPlan.toLowerCase());
+          if (plan) setFormData((prev) => ({ ...prev, planId: plan.id }));
         }
       } else {
         setPlans(defaultPlans);
         if (preselectedPlan) {
-          const plan = defaultPlans.find(
-            (p) => p.name.toLowerCase() === preselectedPlan.toLowerCase()
-          );
-          if (plan) {
-            setFormData((prev) => ({ ...prev, planId: plan.id }));
-          }
+          const plan = defaultPlans.find((p) => p.name.toLowerCase() === preselectedPlan.toLowerCase());
+          if (plan) setFormData((prev) => ({ ...prev, planId: plan.id }));
         }
       }
     };
-
     fetchPlans();
   }, [preselectedPlan]);
 
@@ -170,44 +131,34 @@ export default function PedidoGestao() {
         ? prev.managementTypes.filter((v) => v !== value)
         : [...prev.managementTypes, value],
     }));
+    clearError("managementTypes");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!acceptTerms) {
+    const isValid = validate(formData);
+    if (!isValid) {
       toast({
-        title: "Termos não aceites",
-        description: "Por favor, aceite os termos e condições para continuar.",
+        title: "Campos inválidos",
+        description: "Por favor, corrija os erros no formulário.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!acceptTerms) {
+      toast({ title: "Termos não aceites", description: "Por favor, aceite os termos e condições para continuar.", variant: "destructive" });
       return;
     }
 
     if (!digitalSignature.trim()) {
-      toast({
-        title: "Assinatura necessária",
-        description: "Por favor, digite o seu nome completo como assinatura digital.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.planId) {
-      toast({
-        title: "Plano não selecionado",
-        description: "Por favor, selecione um plano de gestão.",
-        variant: "destructive",
-      });
+      toast({ title: "Assinatura necessária", description: "Por favor, digite o seu nome completo como assinatura digital.", variant: "destructive" });
       return;
     }
 
     if (!user) {
-      toast({
-        title: "Login necessário",
-        description: "Por favor, faça login para submeter o pedido.",
-        variant: "destructive",
-      });
+      toast({ title: "Login necessário", description: "Por favor, faça login para submeter o pedido.", variant: "destructive" });
       navigate("/login");
       return;
     }
@@ -229,17 +180,15 @@ Observações: ${formData.observations || "Nenhuma"}
 
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .insert([
-          {
-            user_id: user.id,
-            plan_id: formData.planId,
-            business_name: formData.siteName,
-            business_type: formData.businessType,
-            description: description,
-            preferences: `Link atual: ${formData.siteLink || "N/A"}`,
-            status: "pendente" as const,
-          },
-        ])
+        .insert([{
+          user_id: user.id,
+          plan_id: formData.planId,
+          business_name: formData.siteName,
+          business_type: formData.businessType,
+          description: description,
+          preferences: `Link atual: ${formData.siteLink || "N/A"}`,
+          status: "pendente" as const,
+        }])
         .select()
         .single();
 
@@ -248,36 +197,26 @@ Observações: ${formData.observations || "Nenhuma"}
       const selectedPlan = plans.find((p) => p.id === formData.planId);
       const totalValue = selectedPlan?.price_monthly || 0;
 
-      const { error: contractError } = await supabase.from("contracts").insert([
-        {
-          order_id: orderData.id,
-          user_id: user.id,
-          client_name: formData.fullName,
-          client_email: formData.email,
-          client_phone: formData.whatsapp || formData.phone,
-          service_description: `Gestão/Manutenção - Plano ${selectedPlan?.name || "N/A"} (${formData.frequency})`,
-          total_value: totalValue,
-          terms_accepted: true,
-          digital_signature: digitalSignature,
-          signed_at: new Date().toISOString(),
-        },
-      ]);
+      const { error: contractError } = await supabase.from("contracts").insert([{
+        order_id: orderData.id,
+        user_id: user.id,
+        client_name: formData.fullName,
+        client_email: formData.email,
+        client_phone: formData.whatsapp || formData.phone,
+        service_description: `Gestão/Manutenção - Plano ${selectedPlan?.name || "N/A"} (${formData.frequency})`,
+        total_value: totalValue,
+        terms_accepted: true,
+        digital_signature: digitalSignature,
+        signed_at: new Date().toISOString(),
+      }]);
 
       if (contractError) throw contractError;
 
-      toast({
-        title: "Pedido enviado com sucesso!",
-        description: "O seu pedido foi registado. Siga as instruções de pagamento.",
-      });
-
+      toast({ title: "Pedido enviado com sucesso!", description: "O seu pedido foi registado. Siga as instruções de pagamento." });
       navigate(`/pedido-confirmado?pedido=${orderData.id}`);
     } catch (error: any) {
       console.error("Order error:", error);
-      toast({
-        title: "Erro ao enviar pedido",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao enviar pedido", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -291,35 +230,15 @@ Observações: ${formData.observations || "Nenhuma"}
         <Breadcrumbs />
 
         <div className="max-w-4xl mx-auto">
-          {/* Form Navigation */}
           <FormNavigation />
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
-            <Badge variant="success" className="mb-4">
-              Formulário de Gestão
-            </Badge>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              Pedido de Gestão / Manutenção de Site Web/App
-            </h1>
-            <p className="text-muted-foreground">
-              Preencha os campos abaixo para solicitar a gestão e manutenção do seu site ou aplicação.
-            </p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-12">
+            <Badge variant="success" className="mb-4">Formulário de Gestão</Badge>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">Pedido de Gestão / Manutenção de Site Web/App</h1>
+            <p className="text-muted-foreground">Preencha os campos abaixo para solicitar a gestão e manutenção do seu site ou aplicação.</p>
           </motion.div>
 
-          {/* Form */}
-          <motion.form
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            onSubmit={handleSubmit}
-            className="space-y-8 p-6 md:p-8 rounded-2xl bg-card border border-border shadow-soft"
-          >
+          <motion.form initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} onSubmit={handleSubmit} className="space-y-8 p-6 md:p-8 rounded-2xl bg-card border border-border shadow-soft">
             {/* 1. Dados do Cliente */}
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -329,100 +248,55 @@ Observações: ${formData.observations || "Nenhuma"}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Nome completo *</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="Seu nome completo"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    required
-                  />
+                  <Input id="fullName" placeholder="Seu nome completo" value={formData.fullName} onChange={(e) => { setFormData({ ...formData, fullName: e.target.value }); clearError("fullName"); }} className={getError("fullName") ? "border-destructive" : ""} />
+                  <FormError message={getError("fullName")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="siteName">Nome do site/app *</Label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="siteName"
-                      placeholder="Nome do seu site ou app"
-                      className="pl-10"
-                      value={formData.siteName}
-                      onChange={(e) => setFormData({ ...formData, siteName: e.target.value })}
-                      required
-                    />
+                    <Input id="siteName" placeholder="Nome do seu site ou app" className={`pl-10 ${getError("siteName") ? "border-destructive" : ""}`} value={formData.siteName} onChange={(e) => { setFormData({ ...formData, siteName: e.target.value }); clearError("siteName"); }} />
                   </div>
+                  <FormError message={getError("siteName")} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="siteLink">Link (se já existir)</Label>
                   <div className="relative">
                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="siteLink"
-                      type="url"
-                      placeholder="https://www.seusite.com"
-                      className="pl-10"
-                      value={formData.siteLink}
-                      onChange={(e) => setFormData({ ...formData, siteLink: e.target.value })}
-                    />
+                    <Input id="siteLink" type="url" placeholder="https://www.seusite.com" className="pl-10" value={formData.siteLink} onChange={(e) => setFormData({ ...formData, siteLink: e.target.value })} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      className="pl-10"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
+                    <Input id="email" type="email" placeholder="seu@email.com" className={`pl-10 ${getError("email") ? "border-destructive" : ""}`} value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError("email"); }} />
                   </div>
+                  <FormError message={getError("email")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+258 84 XXX XXXX"
-                      className="pl-10"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                    />
+                    <Input id="phone" type="tel" placeholder="+258 84 XXX XXXX" className={`pl-10 ${getError("phone") ? "border-destructive" : ""}`} value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); clearError("phone"); }} />
                   </div>
+                  <FormError message={getError("phone")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp *</Label>
                   <div className="relative">
                     <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="whatsapp"
-                      type="tel"
-                      placeholder="+258 84 XXX XXXX"
-                      className="pl-10"
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      required
-                    />
+                    <Input id="whatsapp" type="tel" placeholder="+258 84 XXX XXXX" className={`pl-10 ${getError("whatsapp") ? "border-destructive" : ""}`} value={formData.whatsapp} onChange={(e) => { setFormData({ ...formData, whatsapp: e.target.value }); clearError("whatsapp"); }} />
                   </div>
+                  <FormError message={getError("whatsapp")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="businessType">Tipo de negócio *</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="businessType"
-                      placeholder="Ex: Restaurante, Loja, Clínica..."
-                      className="pl-10"
-                      value={formData.businessType}
-                      onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-                      required
-                    />
+                    <Input id="businessType" placeholder="Ex: Restaurante, Loja, Clínica..." className={`pl-10 ${getError("businessType") ? "border-destructive" : ""}`} value={formData.businessType} onChange={(e) => { setFormData({ ...formData, businessType: e.target.value }); clearError("businessType"); }} />
                   </div>
+                  <FormError message={getError("businessType")} />
                 </div>
               </div>
             </div>
@@ -436,24 +310,14 @@ Observações: ${formData.observations || "Nenhuma"}
               <div className="grid md:grid-cols-2 gap-3">
                 {managementOptions.map((option) => (
                   <div key={option.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`mgmt-${option.value}`}
-                      checked={formData.managementTypes.includes(option.value)}
-                      onCheckedChange={() => toggleManagement(option.value)}
-                    />
-                    <Label htmlFor={`mgmt-${option.value}`} className="cursor-pointer">
-                      {option.label}
-                    </Label>
+                    <Checkbox id={`mgmt-${option.value}`} checked={formData.managementTypes.includes(option.value)} onCheckedChange={() => toggleManagement(option.value)} />
+                    <Label htmlFor={`mgmt-${option.value}`} className="cursor-pointer">{option.label}</Label>
                   </div>
                 ))}
               </div>
+              <FormError message={getError("managementTypes")} />
               {formData.managementTypes.includes("outro") && (
-                <Input
-                  className="mt-3"
-                  placeholder="Especifique outros tipos de gestão"
-                  value={formData.managementOther}
-                  onChange={(e) => setFormData({ ...formData, managementOther: e.target.value })}
-                />
+                <Input className="mt-3" placeholder="Especifique outros tipos de gestão" value={formData.managementOther} onChange={(e) => setFormData({ ...formData, managementOther: e.target.value })} />
               )}
             </div>
 
@@ -463,20 +327,15 @@ Observações: ${formData.observations || "Nenhuma"}
                 <Clock className="w-5 h-5 text-primary" />
                 3. Frequência Desejada *
               </h3>
-              <RadioGroup
-                value={formData.frequency}
-                onValueChange={(value) => setFormData({ ...formData, frequency: value })}
-                className="grid md:grid-cols-2 gap-3"
-              >
+              <RadioGroup value={formData.frequency} onValueChange={(value) => { setFormData({ ...formData, frequency: value }); clearError("frequency"); }} className="grid md:grid-cols-2 gap-3">
                 {frequencyOptions.map((freq) => (
                   <div key={freq.value} className="flex items-center space-x-2">
                     <RadioGroupItem value={freq.value} id={`freq-${freq.value}`} />
-                    <Label htmlFor={`freq-${freq.value}`} className="cursor-pointer">
-                      {freq.label}
-                    </Label>
+                    <Label htmlFor={`freq-${freq.value}`} className="cursor-pointer">{freq.label}</Label>
                   </div>
                 ))}
               </RadioGroup>
+              <FormError message={getError("frequency")} />
             </div>
 
             {/* 4. Planos */}
@@ -485,21 +344,9 @@ Observações: ${formData.observations || "Nenhuma"}
                 <FileText className="w-5 h-5 text-primary" />
                 4. Plano *
               </h3>
-              <RadioGroup
-                value={formData.planId}
-                onValueChange={(value) => setFormData({ ...formData, planId: value })}
-                className="grid md:grid-cols-3 gap-4"
-              >
+              <RadioGroup value={formData.planId} onValueChange={(value) => { setFormData({ ...formData, planId: value }); clearError("planId"); }} className="grid md:grid-cols-3 gap-4">
                 {displayPlans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      formData.planId === plan.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => setFormData({ ...formData, planId: plan.id })}
-                  >
+                  <div key={plan.id} className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.planId === plan.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`} onClick={() => { setFormData({ ...formData, planId: plan.id }); clearError("planId"); }}>
                     <RadioGroupItem value={plan.id} id={`plan-${plan.id}`} className="sr-only" />
                     <div className="text-center">
                       <h4 className="font-bold text-lg">{plan.name}</h4>
@@ -512,6 +359,7 @@ Observações: ${formData.observations || "Nenhuma"}
                   </div>
                 ))}
               </RadioGroup>
+              <FormError message={getError("planId")} />
             </div>
 
             {/* 5. Observações */}
@@ -520,12 +368,7 @@ Observações: ${formData.observations || "Nenhuma"}
                 <MessageSquare className="w-5 h-5 text-primary" />
                 5. Observações adicionais
               </h3>
-              <Textarea
-                placeholder="Detalhes específicos sobre a gestão desejada, problemas actuais, prioridades..."
-                rows={4}
-                value={formData.observations}
-                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-              />
+              <Textarea placeholder="Detalhes específicos sobre a gestão desejada, problemas actuais, prioridades..." rows={4} value={formData.observations} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} />
             </div>
 
             {/* Contract Section */}
@@ -534,58 +377,25 @@ Observações: ${formData.observations || "Nenhuma"}
                 <FileText className="w-5 h-5 text-warning" />
                 6. Aceitação do Contrato de Gestão
               </h3>
-
               <p className="text-sm text-muted-foreground mb-4">
-                ⚠️ Após o envio, será gerado um <strong>contrato digital</strong> com os termos do
-                serviço de gestão, para assinatura e download.
+                ⚠️ Após o envio, será gerado um <strong>contrato digital</strong> com os termos do serviço de gestão, para assinatura e download.
               </p>
-
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms"
-                    checked={acceptTerms}
-                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                  />
-                  <Label
-                    htmlFor="terms"
-                    className="text-sm text-muted-foreground leading-relaxed cursor-pointer"
-                  >
-                    Li e aceito os{" "}
-                    <Link to="/politicas/termos" className="text-primary hover:underline">
-                      Termos de Uso
-                    </Link>{" "}
-                    e a{" "}
-                    <Link to="/politicas/privacidade" className="text-primary hover:underline">
-                      Política de Privacidade
-                    </Link>
-                    . Entendo que será gerado um contrato digital vinculativo para o serviço de gestão mensal.
+                  <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(checked) => setAcceptTerms(checked as boolean)} />
+                  <Label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                    Li e aceito os <Link to="/politicas/termos" className="text-primary hover:underline">Termos de Uso</Link> e a <Link to="/politicas/privacidade" className="text-primary hover:underline">Política de Privacidade</Link>. Entendo que será gerado um contrato digital vinculativo para o serviço de gestão mensal.
                   </Label>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="signature">Assinatura Digital (digite o seu nome completo) *</Label>
-                  <Input
-                    id="signature"
-                    placeholder="Nome Completo"
-                    value={digitalSignature}
-                    onChange={(e) => setDigitalSignature(e.target.value)}
-                    className="font-serif italic"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ao digitar o seu nome, está a assinar electronicamente este pedido de gestão.
-                  </p>
+                  <Input id="signature" placeholder="Nome Completo" value={digitalSignature} onChange={(e) => setDigitalSignature(e.target.value)} className="font-serif italic" />
+                  <p className="text-xs text-muted-foreground">Ao digitar o seu nome, está a assinar electronicamente este pedido de gestão.</p>
                 </div>
               </div>
             </div>
 
-            <Button
-              type="submit"
-              variant="hero"
-              size="xl"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isLoading}>
               {isLoading ? "Enviando pedido..." : "Enviar Pedido e Gerar Contrato"}
               <ArrowRight className="ml-2" />
             </Button>
