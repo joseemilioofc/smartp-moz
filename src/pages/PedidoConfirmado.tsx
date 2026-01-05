@@ -331,9 +331,14 @@ export default function PedidoConfirmado() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4">
+            <Link to={`/contrato?pedido=${orderId}`} className="flex-1">
+              <Button variant="hero" size="lg" className="w-full">
+                <FileText className="mr-2" />
+                Ver Contrato Digital
+              </Button>
+            </Link>
             <Link to="/cliente" className="flex-1">
               <Button variant="outline" size="lg" className="w-full">
-                <FileText className="mr-2" />
                 Ver Meus Pedidos
               </Button>
             </Link>
