@@ -64,7 +64,7 @@ const Index = () => {
               className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
             >
               O Seu Negócio Merece Uma{" "}
-              <span className="text-gradient">Presença Digital</span> de Qualidade
+              <span className="text-primary">Presença Digital</span> de Qualidade
             </motion.h1>
 
             <motion.p
